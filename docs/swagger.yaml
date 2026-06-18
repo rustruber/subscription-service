@@ -1,0 +1,9 @@
+basePath: /api/v1
+host: localhost:8080
+info:
+  contact: {}
+  description: REST-сервис для агрегации данных об онлайн подписках пользователей
+  title: Subscription Service API
+  version: 0.0.1
+paths: {}
+swagger: "2.0"
