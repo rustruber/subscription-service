@@ -12,7 +12,7 @@ import (
 )
 
 // @title           Subscription Service API
-// @version         0.1.0
+// @version         0.1.1
 // @description     REST-сервис для агрегации данных об онлайн подписках пользователей
 // @host            localhost:8080
 // @BasePath        /api/v1
@@ -36,7 +36,8 @@ func main() {
 
 	addr := ":" + cfg.ServerPort
 	fmt.Println("Server started at ", addr)
-	fmt.Println("Swagger UI: http://localhost:8080/swagger/index.html")
+	url := fmt.Sprintf("Swagger UI: http://localhost:%s/swagger/index.html", addr)
+	fmt.Println(url)
 
 	if err := http.ListenAndServe(addr, r); err != nil {
 		panic("Server failed: " + err.Error())
