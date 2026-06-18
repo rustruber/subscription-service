@@ -1,10 +1,10 @@
 # Roadmap
 
 ## Phase 1: MVP (v1.0.0) - Q2 2026
-- [ ] Базовая структура проекта
+- [x] Базовая структура проекта
 - [ ] CRUDL операции
 - [ ] PostgreSQL
-- [ ] Swagger
+- [x] Swagger
 - [ ] Docker Compose
 - [ ] Логирование
 

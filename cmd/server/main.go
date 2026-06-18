@@ -1,6 +1,9 @@
 // cmd/server/main.go
 package main
 
+import (
+	_ "github.com/rustruber/subscription-service/docs"
+)
 
 // @title           Subscription Service API
 // @version         0.0.1
