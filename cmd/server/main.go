@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/rustruber/subscription-service/docs"
+	"github.com/rustruber/subscription-service/internal/infrastructure/config"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -17,6 +18,11 @@ import (
 // @BasePath        /api/v1
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		panic("Failed to load config: " + err.Error())
+	}
+
 	r := mux.NewRouter()
 
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
@@ -28,11 +34,11 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	}).Methods("GET")
 
-	fmt.Println("Server started at :8080")
+	addr := ":" + cfg.ServerPort
+	fmt.Println("Server started at ", addr)
 	fmt.Println("Swagger UI: http://localhost:8080/swagger/index.html")
 
-	err := http.ListenAndServe(`:8080`, r)
-	if err != nil {
-		panic(err)
+	if err := http.ListenAndServe(addr, r); err != nil {
+		panic("Server failed: " + err.Error())
 	}
 }
