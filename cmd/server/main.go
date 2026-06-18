@@ -35,8 +35,8 @@ func main() {
 	}).Methods("GET")
 
 	addr := ":" + cfg.ServerPort
-	fmt.Println("Server started at ", addr)
-	url := fmt.Sprintf("Swagger UI: http://localhost:%s/swagger/index.html", addr)
+	fmt.Println("Server started at http://localhost" + addr)
+	url := fmt.Sprintf("Swagger UI: http://localhost%s/swagger/index.html", addr)
 	fmt.Println(url)
 
 	if err := http.ListenAndServe(addr, r); err != nil {
