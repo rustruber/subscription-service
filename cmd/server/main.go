@@ -19,7 +19,7 @@ import (
 )
 
 // @title           Subscription Service API
-// @version         0.1.0
+// @version         0.2.0
 // @description     REST-сервис для агрегации данных об онлайн подписках пользователей
 // @host            localhost:8080
 // @BasePath        /api/v1
