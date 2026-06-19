@@ -36,13 +36,13 @@ migrate-down: ## Откатить миграции
 
 # ------------------------- DOCKER ---------------------------
 docker-up:   ## Запустить всё через Docker Compose
-	docker-compose up -d
+	docker compose up -d
 
 docker-down: ## Остановить Docker Compose
-	docker-compose down
+	docker compose down
 
 docker-logs: ## Показать логи
-	docker-compose logs -f
+	docker compose logs -f
 
 # ------------------------- SWAGGER --------------------------
 swagger: ## Сгенерировать Swagger документацию

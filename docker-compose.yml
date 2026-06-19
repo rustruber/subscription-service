@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: subscription-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: subscription
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d subscription"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  # СЕРВИС ДЛЯ МИГРАЦИЙ
+  migrate:
+    image: postgres:15-alpine
+    container_name: subscription-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for postgres...' &&
+        sleep 3 &&
+        echo 'Running migrations...' &&
+        for f in /migrations/*.up.sql; do
+          echo 'Executing: ' \$f &&
+          psql 'postgres://postgres:postgres@postgres:5432/subscription?sslmode=disable' -f \$f
+        done &&
+        echo 'Migrations completed!'
+      "
+
+  app:
+    build: .
+    container_name: subscription-service
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: subscription
+      DB_SSL_MODE: disable
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./docs:/app/docs  # для Swagger
+
+volumes:
+  postgres_data:
