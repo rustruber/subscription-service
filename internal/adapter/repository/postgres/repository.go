@@ -15,6 +15,7 @@ type PostgresRepository struct {
 	logger port.Logger
 }
 
+// NewPostgresRepository ...
 func NewPostgresRepository(db *sql.DB, logger port.Logger) port.SubscriptionRepository {
 	return &PostgresRepository{
 		db:     db,

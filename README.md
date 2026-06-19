@@ -57,3 +57,29 @@ GET  /subscriptions/total-cost?start_date=01-2026&end_date=12-2026
 ```bash
 make help
 ```
+
+## Логи в контейнере
+
+### Логи в реальном времени
+```bash
+docker compose logs -f
+```
+
+### Логи всех сервисов
+```bash
+docker compose logs
+```
+### Логи конкретного сервиса
+```bash
+# Логи твоего сервиса
+docker compose logs app
+# Логи БД
+docker compose logs postgres
+# Логи миграций
+docker compose logs migrate
+```
+
+### Логи последние 50 строк
+```bash
+docker compose logs --tail 50
+```
