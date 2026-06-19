@@ -160,30 +160,31 @@ func (r *PostgresRepository) List(ctx context.Context, limit, offset int) ([]*do
 	return subs, total, nil
 }
 
-// GetTotalCost — считает сумму за период
 func (r *PostgresRepository) GetTotalCost(ctx context.Context, userID, serviceName string, startDate, endDate time.Time) (int, error) {
-	r.logger.Debug("Calculating total cost",
-		"user_id", userID,
-		"service", serviceName,
-		"start", startDate,
-		"end", endDate,
-	)
-
+	// 1. Базовый запрос с $1 и $2
 	query := `SELECT COALESCE(SUM(price), 0) FROM subscriptions WHERE start_date >= $1 AND start_date <= $2`
 	args := []interface{}{startDate, endDate}
 	argIndex := 3
 
+	// 2. Добавляем фильтр по user_id (если передан)
 	if userID != "" {
 		query += fmt.Sprintf(" AND user_id = $%d", argIndex)
 		args = append(args, userID)
 		argIndex++
 	}
+
+	// 3. Добавляем фильтр по service_name (если передан)
 	if serviceName != "" {
 		query += fmt.Sprintf(" AND LOWER(service_name) = LOWER($%d)", argIndex)
 		args = append(args, serviceName)
+		argIndex++
 	}
 
+	// 4. Выполняем запрос
 	var total int
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(&total)
-	return total, err
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
