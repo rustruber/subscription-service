@@ -51,7 +51,7 @@ info:
   contact: {}
   description: REST-сервис для агрегации данных об онлайн подписках пользователей
   title: Subscription Service API
-  version: 0.2.0
+  version: 0.3.1
 paths:
   /subscriptions:
     get:

@@ -4,7 +4,7 @@
         "description": "REST-сервис для агрегации данных об онлайн подписках пользователей",
         "title": "Subscription Service API",
         "contact": {},
-        "version": "0.2.0"
+        "version": "0.3.1"
     },
     "host": "localhost:8080",
     "basePath": "/api/v1",

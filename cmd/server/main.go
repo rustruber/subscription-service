@@ -12,13 +12,13 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	httpSwagger "github.com/swaggo/http-swagger"
-
+	_ "github.com/rustruber/subscription-service/docs"
 	"github.com/rustruber/subscription-service/internal/adapter/api/rest"
 	"github.com/rustruber/subscription-service/internal/adapter/logger"
 	"github.com/rustruber/subscription-service/internal/adapter/repository/postgres"
 	"github.com/rustruber/subscription-service/internal/application/subscription"
 	"github.com/rustruber/subscription-service/internal/infrastructure/config"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "net/http/pprof"
 )

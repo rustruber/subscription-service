@@ -158,15 +158,14 @@ func (r *PostgresRepository) List(ctx context.Context, limit, offset int) ([]*do
 
 	return subs, total, nil
 }
-
 func (r *PostgresRepository) GetTotalCost(ctx context.Context, userID, serviceName string, startDate, endDate time.Time) (int, error) {
-	// Один запрос, без конкатенации
+	// Один запрос, без конкатенации. Приводим user_id к UUID
 	query := `
 		SELECT COALESCE(SUM(price), 0) 
 		FROM subscriptions 
 		WHERE start_date >= $1 
 		  AND start_date <= $2
-		  AND ($3 = '' OR user_id = $3)
+		  AND ($3 = '' OR user_id = $3::uuid)
 		  AND ($4 = '' OR LOWER(service_name) = LOWER($4))
 	`
 

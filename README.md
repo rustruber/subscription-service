@@ -107,6 +107,11 @@ docker exec -it subscription-db psql -U postgres -d subscription -c "\dt"
 make migrate-down
 ```
 
+## Запустить сервер локально
+```bash
+make run
+```
+
 ## Пример запросов
 
 Подсчёт суммарной стоимости всех подписок за выбранный период с фильтрацией по `id` пользователя и названию подписки
