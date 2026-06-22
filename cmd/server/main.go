@@ -1,22 +1,25 @@
-// cmd/server/main.go
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-
-	_ "github.com/rustruber/subscription-service/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
-
-	"net/http"
 
 	"github.com/rustruber/subscription-service/internal/adapter/api/rest"
 	"github.com/rustruber/subscription-service/internal/adapter/logger"
 	"github.com/rustruber/subscription-service/internal/adapter/repository/postgres"
 	"github.com/rustruber/subscription-service/internal/application/subscription"
 	"github.com/rustruber/subscription-service/internal/infrastructure/config"
+
 	_ "net/http/pprof"
 )
 
@@ -25,6 +28,7 @@ import (
 // @description     REST-сервис для агрегации данных об онлайн подписках пользователей
 // @host            localhost:8080
 // @BasePath        /api/v1
+
 func main() {
 	// 1. Загружаем конфиг
 	cfg, err := config.Load()
@@ -53,11 +57,8 @@ func main() {
 	}
 	log.Info("Database connected")
 
-	// 6. Автоматически накатываем миграции
-	if err := runMigrations(db, log); err != nil {
-		log.Fatal("Failed to run migrations", "error", err)
-	}
-	log.Info("Migrations applied successfully")
+	// 6. Миграции накатываются через контейнер migrate
+	log.Info("Migrations are handled by the migrate container")
 
 	// 7. Создаём репозиторий
 	repo := postgres.NewPostgresRepository(db, log)
@@ -89,30 +90,49 @@ func main() {
 	// 13. Swagger UI
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
-	// 14. Запускаем сервер
+	// 14. Запускаем сервер с graceful shutdown
 	addr := ":" + cfg.ServerPort
-	log.Info("Server starting", "port", cfg.ServerPort)
-	log.Info("Swagger UI", "url", "http://localhost"+addr+"/swagger/index.html")
-	go foo()
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatal("Server failed", "error", err)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
+
+	go func() {
+		log.Info("Server starting", "port", cfg.ServerPort)
+		log.Info("Swagger UI", "url", "http://localhost"+addr+"/swagger/index.html")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Server failed", "error", err)
+		}
+	}()
+
+	// Ожидаем сигнал от ОС
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Server forced to shutdown", "error", err)
+	}
+
+	log.Info("Server stopped")
 }
 
 // ensureDatabaseExists проверяет, существует ли база данных, и создаёт её при необходимости
 func ensureDatabaseExists(cfg *config.Config, log *logger.Logger) error {
-	// Строка подключения к стандартной БД postgres (без указания имени БД)
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=%s",
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBSSLMode)
 
-	// Подключаемся к БД postgres
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to postgres database: %w", err)
 	}
 	defer db.Close()
 
-	// Проверяем, существует ли БД
 	var exists bool
 	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", cfg.DBName)
 	err = db.QueryRow(query).Scan(&exists)
@@ -125,7 +145,6 @@ func ensureDatabaseExists(cfg *config.Config, log *logger.Logger) error {
 		return nil
 	}
 
-	// Если БД нет — создаём
 	log.Info("Creating database", "db", cfg.DBName)
 	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", cfg.DBName))
 	if err != nil {
@@ -134,69 +153,4 @@ func ensureDatabaseExists(cfg *config.Config, log *logger.Logger) error {
 
 	log.Info("Database created successfully", "db", cfg.DBName)
 	return nil
-}
-func runMigrations(db *sql.DB, log *logger.Logger) error {
-	// Проверяем, существует ли таблица
-	var exists bool
-	err := db.QueryRow(`
-	       SELECT EXISTS (
-	           SELECT 1 FROM information_schema.tables
-	           WHERE table_name = 'subscriptions'
-	       )
-	   `).Scan(&exists)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		log.Info("Table subscriptions already exists")
-		return nil
-	}
-
-	log.Info("Creating table subscriptions...")
-
-	// Создаём таблицу
-	_, err = db.Exec(`
-	       CREATE TABLE IF NOT EXISTS subscriptions (
-	           id UUID PRIMARY KEY,
-	           service_name VARCHAR(255) NOT NULL,
-	           price INTEGER NOT NULL CHECK (price > 0),
-	           user_id UUID NOT NULL,
-	           start_date TIMESTAMP NOT NULL,
-	           end_date TIMESTAMP,
-	           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	       )
-	   `)
-	if err != nil {
-		return err
-	}
-
-	// Создаём индексы
-	_, err = db.Exec(`
-	       CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
-	       CREATE INDEX IF NOT EXISTS idx_subscriptions_service_name ON subscriptions(service_name);
-	       CREATE INDEX IF NOT EXISTS idx_subscriptions_start_date ON subscriptions(start_date);
-	   `)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Table subscriptions created with indexes")
-	return nil
-}
-
-const (
-	addr    = ":8080"  // адрес сервера
-	maxSize = 10000000 // будем растить слайс до 10 миллионов элементов
-)
-
-func foo() {
-	// полезная нагрузка
-	for {
-		var s []int
-		for i := 0; i < maxSize; i++ {
-			s = append(s, i)
-		}
-	}
 }

@@ -38,8 +38,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	startDate, _ := time.Parse("01-2006", req.StartDate)
 	var endDate *time.Time
-	if req.EndDate != nil && *req.EndDate != "" {
-		t, _ := time.Parse("01-2006", *req.EndDate)
+	if req.EndDate != nil {
+		t, err := time.Parse("01-2006", *req.EndDate)
+		if err != nil {
+			http.Error(w, "invalid end_date format (use MM-YYYY)", http.StatusBadRequest)
+			return
+		}
 		endDate = &t
 	}
 
@@ -142,9 +146,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	startDate, _ := time.Parse("01-2006", req.StartDate)
+	// Update
 	var endDate *time.Time
-	if req.EndDate != nil && *req.EndDate != "" {
-		t, _ := time.Parse("01-2006", *req.EndDate)
+	if req.EndDate != nil {
+		t, err := time.Parse("01-2006", *req.EndDate)
+		if err != nil {
+			http.Error(w, "invalid end_date format (use MM-YYYY)", http.StatusBadRequest)
+			return
+		}
 		endDate = &t
 	}
 
