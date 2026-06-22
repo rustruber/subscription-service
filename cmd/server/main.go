@@ -57,8 +57,11 @@ func main() {
 	}
 	log.Info("Database connected")
 
-	// 6. Миграции накатываются через контейнер migrate
-	log.Info("Migrations are handled by the migrate container")
+	// ✅ 6. НАКАТЫВАЕМ МИГРАЦИИ
+	if err := runMigrations(db, log); err != nil {
+		log.Fatal("Failed to run migrations", "error", err)
+	}
+	log.Info("Migrations applied successfully")
 
 	// 7. Создаём репозиторий
 	repo := postgres.NewPostgresRepository(db, log)
@@ -152,5 +155,55 @@ func ensureDatabaseExists(cfg *config.Config, log *logger.Logger) error {
 	}
 
 	log.Info("Database created successfully", "db", cfg.DBName)
+	return nil
+}
+func runMigrations(db *sql.DB, log *logger.Logger) error {
+	// Проверяем, существует ли таблица
+	var exists bool
+	err := db.QueryRow(`
+	       SELECT EXISTS (
+	           SELECT 1 FROM information_schema.tables
+	           WHERE table_name = 'subscriptions'
+	       )
+	   `).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		log.Info("Table subscriptions already exists")
+		return nil
+	}
+
+	log.Info("Creating table subscriptions...")
+
+	// Создаём таблицу
+	_, err = db.Exec(`
+	       CREATE TABLE IF NOT EXISTS subscriptions (
+	           id UUID PRIMARY KEY,
+	           service_name VARCHAR(255) NOT NULL,
+	           price INTEGER NOT NULL CHECK (price > 0),
+	           user_id UUID NOT NULL,
+	           start_date TIMESTAMP NOT NULL,
+	           end_date TIMESTAMP,
+	           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+	       )
+	   `)
+	if err != nil {
+		return err
+	}
+
+	// Создаём индексы
+	_, err = db.Exec(`
+	       CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+	       CREATE INDEX IF NOT EXISTS idx_subscriptions_service_name ON subscriptions(service_name);
+	       CREATE INDEX IF NOT EXISTS idx_subscriptions_start_date ON subscriptions(start_date);
+	   `)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Table subscriptions created with indexes")
 	return nil
 }
